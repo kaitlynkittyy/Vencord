@@ -20,7 +20,7 @@ import { debounce } from "@shared/debounce";
 import { SettingsStore as SettingsStoreClass } from "@shared/SettingsStore";
 import { localStorage } from "@utils/localStorage";
 import { Logger } from "@utils/Logger";
-import { mergeDefaults } from "@utils/misc";
+import { mergeDefaults } from "@utils/mergeDefaults";
 import { putCloudSettings } from "@utils/settingsSync";
 import { DefinedSettings, OptionType, SettingsChecks, SettingsDefinition } from "@utils/types";
 import { React } from "@webpack/common";
@@ -106,7 +106,7 @@ const DefaultSettings: Settings = {
     }
 };
 
-const settings = VencordNative.settings.get();
+const settings = !IS_REPORTER ? VencordNative.settings.get() : {} as Settings;
 mergeDefaults(settings, DefaultSettings);
 
 const saveSettingsOnFrequentAction = debounce(async () => {
@@ -156,12 +156,14 @@ export const SettingsStore = new SettingsStoreClass(settings, {
     }
 });
 
-SettingsStore.addGlobalChangeListener((_, path) => {
-    SettingsStore.plain.cloud.settingsSyncVersion = Date.now();
-    localStorage.Vencord_settingsDirty = true;
-    saveSettingsOnFrequentAction();
-    VencordNative.settings.set(SettingsStore.plain, path);
-});
+if (!IS_REPORTER) {
+    SettingsStore.addGlobalChangeListener((_, path) => {
+        SettingsStore.plain.cloud.settingsSyncVersion = Date.now();
+        localStorage.Vencord_settingsDirty = true;
+        saveSettingsOnFrequentAction();
+        VencordNative.settings.set(SettingsStore.plain, path);
+    });
+}
 
 /**
  * Same as {@link Settings} but unproxied. You should treat this as readonly,
